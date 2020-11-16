@@ -1,0 +1,44 @@
+version: '3.1'
+
+services:
+  db:
+    image: mysql
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: example_pass
+    volumes:
+    - "/usr/projects/mysql_data_test:/var/lib/mysql"
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    restart: always
+    environment:
+      PMA_PORT: db
+      PMA_USER: example_user
+      PMA_PASSWORD: example_pass
+
+  nginx:
+    image: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: always
+    volumes:
+      - "./media:/usr/projects/current/media"
+      - "./prod/nginx_conf:/etc/nginx/conf.d"
+      - "./prod/nginx_conf/letsencrypt:/etc/letsencrypt"
+      - "./assets:/usr/projects/current/assets"
+      - "./log_nginx:/var/log/nginx:"
+
+  services:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    command: bash -c "python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:8000 EXAMPLE_PERSONAL_SERVICES.wsgi --reload"
+    restart: always
+    environment:
+      - LEVEL=PRODUCTION
+    volumes:
+      - ".:/usr/projects/current"
+      - "./media:/usr/projects/current/media"
